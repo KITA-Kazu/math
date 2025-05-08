@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高校数学 早押しクイズ</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6; /* 少し数学っぽい背景色に */
+            color: #333;
+        }
+
+        #quiz-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 700px; /* 少し幅を広げる */
+            text-align: center;
+        }
+
+        #start-screen h1 {
+            color: #3498db; /* テーマカラー変更 */
+        }
+
+        #start-screen button,
+        #quiz-screen button.choice-btn,
+        #quiz-screen #next-question-btn,
+        #result-screen button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 22px; /* 少しボタンを大きく */
+            margin: 10px 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        #start-screen button:hover,
+        #quiz-screen button.choice-btn:hover:not(:disabled),
+        #quiz-screen #next-question-btn:hover,
+        #result-screen button:hover {
+            background-color: #2980b9;
+        }
+
+        #quiz-screen {
+            display: none;
+        }
+
+        #timer-container {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #e74c3c; /* タイマーの色変更 */
+        }
+        
+        #progress-bar-container {
+            width: 100%;
+            background-color: #ecf0f1;
+            border-radius: .25rem;
+            margin-bottom: 15px;
+            height: 20px;
+        }
+
+        #progress-bar {
+            width: 100%;
+            height: 100%;
+            background-color: #2ecc71; /* プログレスバーの色変更 */
+            border-radius: .25rem;
+            transition: width 0.1s linear;
+        }
+
+        #score-container {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #1abc9c; /* スコアの色変更 */
+        }
+
+        #question-theme {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        #question-text {
+            font-size: 1.6em; /* 問題文を少し大きく */
+            margin-bottom: 20px;
+            min-height: 60px; 
+            line-height: 1.4; /* 数式が見やすいように行間調整 */
+        }
+
+        #choices-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        #quiz-screen button.choice-btn {
+            background-color: #95a5a6;
+            width: 100%;
+            min-height: 70px; /* 選択肢ボタンを少し大きく */
+            font-size: 1.1em; /* 選択肢の文字を少し大きく */
+        }
+
+        #quiz-screen button.choice-btn.correct {
+            background-color: #2ecc71 !important; 
+        }
+        #quiz-screen button.choice-btn.incorrect {
+            background-color: #e74c3c !important; 
+        }
+        #quiz-screen button.choice-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+
+        #feedback {
+            margin-top: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        #feedback.correct {
+            color: #2ecc71;
+        }
+        #feedback.incorrect {
+            color: #e74c3c;
+        }
+
+        #next-question-btn {
+            margin-top: 20px;
+            background-color: #f1c40f;
+            color: #2c3e50;
+        }
+        #next-question-btn:hover {
+            background-color: #f39c12;
+        }
+
+        #result-screen {
+            display: none; 
+        }
+        #result-screen h2 {
+            color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div id="start-screen">
+        <h1>高校数学 早押しクイズ</h1>
+        <p>挑戦するテーマを選んでください：</p>
+        <button onclick="startQuiz('因数分解ドリル')">因数分解ドリル (10問)</button>
+        <button onclick="startQuiz('2次関数の頂点')">2次関数の頂点 (10問)</button>
+        <button onclick="startQuiz('確率(本の並べ方)')">確率(本の並べ方) (10問)</button>
+    </div>
+
+    <div id="quiz-screen">
+        <div id="timer-container">残り時間: <span id="time-left">15</span>秒</div>
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="score-container">スコア: <span id="current-score">0</span></div>
+        <hr>
+        <div id="question-number"></div>
+        <div id="question-theme"></div>
+        <div id="question-text"></div>
+        <div id="choices-container">
+            <button class="choice-btn" id="choice0" onclick="selectAnswer(0)"></button>
+            <button class="choice-btn" id="choice1" onclick="selectAnswer(1)"></button>
+            <button class="choice-btn" id="choice2" onclick="selectAnswer(2)"></button>
+            <button class="choice-btn" id="choice3" onclick="selectAnswer(3)"></button>
+        </div>
+        <div id="feedback"></div>
+        <button id="next-question-btn" onclick="loadNextQuestion()" style="display:none;">次の問題へ</button>
+    </div>
+
+    <div id="result-screen">
+        <h2>クイズ終了！</h2>
+        <p>最終スコア: <span id="final-score">0</span></p>
+        <p>全 <span id="total-questions-result">0</span> 問中 <span id="correct-answers-result">0</span> 問正解</p>
+        <button onclick="restartQuiz()">もう一度挑戦する</button>
+    </div>
+</div>
+
+<script>
+    const allQuizzes = {
+        "因数分解ドリル": [
+            { question: "x² + 3x + 2 を因数分解せよ。", choices: ["(x+1)(x+2)", "(x-1)(x-2)", "(x+1)(x-2)", "(x-1)(x+2)"], answer: 0 },
+            { question: "x² - 5x + 6 を因数分解せよ。", choices: ["(x-2)(x-3)", "(x+2)(x+3)", "(x-2)(x+3)", "(x+2)(x-3)"], answer: 0 },
+            { question: "x² + x - 12 を因数分解せよ。", choices: ["(x+4)(x-3)", "(x-4)(x+3)", "(x+6)(x-2)", "(x-6)(x+2)"], answer: 0 },
+            { question: "x² - 9 を因数分解せよ。", choices: ["(x+3)(x-3)", "x(x-9)", "(x-3)²", "(x+3)²"], answer: 0 },
+            { question: "x² + 8x + 16 を因数分解せよ。", choices: ["(x+4)²", "(x-4)²", "(x+8)(x+2)", "(x+16)(x+1)"], answer: 0 },
+            { question: "2x² + 5x + 2 を因数分解せよ。", choices: ["(2x+1)(x+2)", "(2x+2)(x+1)", "(2x-1)(x-2)", "(x+1)(2x+2)"], answer: 0 }, // (2x+2)(x+1) = 2(x+1)^2
+            { question: "a² - ab を因数分解せよ。", choices: ["a(a-b)", "a(a+b)", "b(a-1)", "a²(1-b/a)"], answer: 0 },
+            { question: "y² - 7y - 8 を因数分解せよ。", choices: ["(y+1)(y-8)", "(y-1)(y+8)", "(y+1)(y+8)", "(y-1)(y-8)"], answer: 0 },
+            { question: "m² - 2mn + n² を因数分解せよ。", choices: ["(m-n)²", "(m+n)²", "(m-n)(m+n)", "m(m-2n)+n²"], answer: 0 },
+            { question: "3x² - 12 を因数分解せよ。", choices: ["3(x+2)(x-2)", "3(x-2)²", "(3x-6)(x+2)", "3(x²-4)"], answer: 0 } // 3(x²-4)も正しいが、最後まで分解を促す
+        ],
+        "2次関数の頂点": [
+            { question: "y = (x - 1)² + 3 の頂点は？", choices: ["(1, 3)", "(-1, 3)", "(1, -3)", "(-1, -3)"], answer: 0 },
+            { question: "y = x² - 4x + 5 の頂点は？", choices: ["(2, 1)", "(-2, 1)", "(2, 5)", "(-4, 5)"], answer: 0 }, // (x-2)^2 -4 + 5 = (x-2)^2 + 1
+            { question: "y = - (x + 2)² - 1 の頂点は？", choices: ["(-2, -1)", "(2, -1)", "(-2, 1)", "(2, 1)"], answer: 0 },
+            { question: "y = 2x² + 8x + 3 の頂点は？", choices: ["(-2, -5)", "(2, -5)", "(-2, 3)", "(4, 3)"], answer: 0 }, // 2(x^2+4x) + 3 = 2(x+2)^2 -8 + 3 = 2(x+2)^2 -5
+            { question: "y = x² + 6x の頂点は？", choices: ["(-3, -9)", "(3, -9)", "(-3, 0)", "(0, -9)"], answer: 0 }, // (x+3)^2 -9
+            { question: "y = 3(x - 5)² の頂点は？", choices: ["(5, 0)", "(-5, 0)", "(0, 5)", "(0, -5)"], answer: 0 },
+            { question: "y = -x² + 2x - 7 の頂点は？", choices: ["(1, -6)", "(-1, -6)", "(1, -7)", "(-2, -7)"], answer: 0 }, // -(x^2-2x) -7 = -(x-1)^2 +1 -7 = -(x-1)^2 -6
+            { question: "y = (1/2)x² - x + 1 の頂点は？", choices: ["(1, 1/2)", "(-1, 1/2)", "(1, 1)", "(2, 1)"], answer: 0 }, // (1/2)(x^2-2x) +1 = (1/2)(x-1)^2 -1/2 + 1 = (1/2)(x-1)^2 + 1/2
+            { question: "y = x² + 10 の頂点は？", choices: ["(0, 10)", "(10, 0)", "(0, -10)", "(-10, 0)"], answer: 0 },
+            { question: "y = -4(x + 1)² + 4 の頂点は？", choices: ["(-1, 4)", "(1, 4)", "(-1, -4)", "(4, -1)"], answer: 0 }
+        ],
+        "確率(本の並べ方)": [
+            { question: "異なる3冊の本を一列に並べる方法は何通り？", choices: ["6通り (3!)", "3通り", "9通り (3²)", "1通り"], answer: 0 },
+            { question: "異なる4冊の本から2冊を選んで一列に並べる方法は？ (₄P₂)", choices: ["12通り", "6通り (₄C₂)", "8通り", "24通り (4!)"], answer: 0 },
+            { question: "A, B, C の3冊の本を並べる時、Aが先頭に来る並べ方は何通り？", choices: ["2通り (2!)", "1通り", "3通り", "6通り (3!)"], answer: 0 },
+            { question: "国語, 数学, 理科, 社会の4冊の本を並べる時、国語と数学が隣り合う並べ方は何通り？", choices: ["12通り (2! × 3!)", "6通り (3!)", "24通り (4!)", "4通り"], answer: 0 }, // (国数)を1塊として3! × 2!
+            { question: "異なる5冊の本がある。この中から特定の1冊(仮にXとする)を必ず中央に置く場合、5冊全ての並べ方は何通り？", choices: ["24通り (4!)", "120通り (5!)", "6通り (3!)", "4通り"], answer: 0 },
+            { question: "赤, 青, 黄の3冊の異なる本を並べる。赤が左端、青が右端に来る並べ方は何通り？", choices: ["1通り", "2通り", "3通り", "0通り"], answer: 0 },
+            { question: "4冊の漫画(全て異なる)と3冊の小説(全て異なる)がある。漫画4冊を先に並べ、次に小説3冊を並べる方法は何通り？", choices: ["144通り (4! × 3!)", "5040通り (7!)", "24通り (4!)", "6通り (3!)"], answer: 0 },
+            { question: "同じ種類の赤い本2冊と、異なる青い本1冊の計3冊を並べる方法は何通り？ (同じものは区別しない)", choices: ["3通り (3!/2!)", "6通り (3!)", "2通り", "1通り"], answer: 0 }, // 実際は 赤赤青, 赤青赤, 青赤赤
+            { question: "A,B,C,Dの4冊の本から3冊を選んで一列に並べる方法は？ (₄P₃)", choices: ["24通り", "12通り", "4通り (₄C₃)", "64通り (4³)"], answer: 0 },
+            { question: "5人の生徒がそれぞれ1冊ずつ異なる本を持ち寄った。これら5冊を円形に並べる方法は何通り？ ((n-1)!)", choices: ["24通り ((5-1)!)", "120通り (5!)", "20通り", "25通り"], answer: 0 }
+        ]
+    };
+
+    let currentQuizData = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let correctAnswersCount = 0;
+    let timeLeft = 15; 
+    let timerInterval;
+    const BASE_POINTS_PER_QUESTION = 100; 
+    const TIME_BONUS_MULTIPLIER = 10; 
+
+    const startScreen = document.getElementById('start-screen');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultScreen = document.getElementById('result-screen');
+
+    const questionNumberEl = document.getElementById('question-number');
+    const questionThemeEl = document.getElementById('question-theme');
+    const questionTextEl = document.getElementById('question-text');
+    const choiceButtons = [
+        document.getElementById('choice0'),
+        document.getElementById('choice1'),
+        document.getElementById('choice2'),
+        document.getElementById('choice3')
+    ];
+    const feedbackEl = document.getElementById('feedback');
+    const nextQuestionBtn = document.getElementById('next-question-btn');
+    
+    const timeLeftEl = document.getElementById('time-left');
+    const progressBar = document.getElementById('progress-bar');
+    const currentScoreEl = document.getElementById('current-score');
+    
+    const finalScoreEl = document.getElementById('final-score');
+    const totalQuestionsResultEl = document.getElementById('total-questions-result');
+    const correctAnswersResultEl = document.getElementById('correct-answers-result');
+
+    function shuffleArray(array) { 
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function startQuiz(theme) {
+        currentQuizData = [...allQuizzes[theme]]; 
+        shuffleArray(currentQuizData); 
+        currentQuestionIndex = 0;
+        score = 0;
+        correctAnswersCount = 0;
+        updateScoreDisplay();
+        
+        startScreen.style.display = 'none';
+        resultScreen.style.display = 'none';
+        quizScreen.style.display = 'block';
+        
+        loadNextQuestion();
+    }
+
+    function loadNextQuestion() {
+        if (currentQuestionIndex < currentQuizData.length) {
+            resetQuestionState();
+            const questionData = currentQuizData[currentQuestionIndex];
+            
+            questionNumberEl.textContent = `問題 ${currentQuestionIndex + 1} / ${currentQuizData.length}`;
+            questionThemeEl.textContent = `テーマ: ${getThemeFromQuestion(questionData)}`;
+            questionTextEl.innerHTML = questionData.question; // 数式で上付き文字などを使う可能性を考慮してinnerHTMLに
+            
+            questionData.choices.forEach((choice, index) => {
+                choiceButtons[index].innerHTML = choice; // 同様にinnerHTML
+            });
+            
+            startTimer();
+            currentQuestionIndex++;
+        } else {
+            showResults();
+        }
+    }
+    
+    function getThemeFromQuestion(questionData) {
+        for (const theme in allQuizzes) {
+            if (allQuizzes[theme].some(q => q.question === questionData.question)) {
+                return theme;
+            }
+        }
+        return "不明";
+    }
+
+    function resetQuestionState() {
+        feedbackEl.textContent = '';
+        feedbackEl.className = '';
+        nextQuestionBtn.style.display = 'none';
+        choiceButtons.forEach(button => {
+            button.disabled = false;
+            button.className = 'choice-btn';
+        });
+        timeLeft = 15;
+        timeLeftEl.textContent = timeLeft;
+        progressBar.style.width = '100%';
+        progressBar.style.backgroundColor = '#2ecc71'; 
+    }
+
+    function startTimer() {
+        timeLeft = 15;
+        timeLeftEl.textContent = timeLeft;
+        progressBar.style.transition = 'width 0.1s linear'; 
+        progressBar.style.width = '100%';
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timeLeftEl.textContent = timeLeft;
+            progressBar.style.width = (timeLeft / 15) * 100 + '%';
+
+            if (timeLeft <= 5 && timeLeft > 0) {
+                progressBar.style.backgroundColor = '#e67e22'; // オレンジ色に
+            } else if (timeLeft <= 0) {
+                progressBar.style.backgroundColor = '#e74c3c'; // 赤色に
+                clearInterval(timerInterval);
+                feedbackEl.textContent = "時間切れ！";
+                feedbackEl.className = 'incorrect';
+                disableChoices();
+                showCorrectAnswer();
+                nextQuestionBtn.style.display = 'block';
+            }
+        }, 1000);
+    }
+
+    function selectAnswer(selectedIndex) {
+        clearInterval(timerInterval);
+        disableChoices();
+
+        const questionData = currentQuizData[currentQuestionIndex - 1]; 
+        const correctAnswerIndex = questionData.answer;
+
+        if (selectedIndex === correctAnswerIndex) {
+            const pointsEarned = BASE_POINTS_PER_QUESTION + (timeLeft * TIME_BONUS_MULTIPLIER);
+            score += pointsEarned;
+            correctAnswersCount++;
+            feedbackEl.textContent = `正解！ +${pointsEarned}点 (残り${timeLeft}秒ボーナス)`;
+            feedbackEl.className = 'correct';
+            choiceButtons[selectedIndex].classList.add('correct');
+        } else {
+            feedbackEl.textContent = "不正解...";
+            feedbackEl.className = 'incorrect';
+            choiceButtons[selectedIndex].classList.add('incorrect');
+            choiceButtons[correctAnswerIndex].classList.add('correct'); 
+        }
+        updateScoreDisplay();
+        nextQuestionBtn.style.display = 'block';
+    }
+
+    function disableChoices() {
+        choiceButtons.forEach(button => button.disabled = true);
+    }
+    
+    function showCorrectAnswer() {
+        const questionData = currentQuizData[currentQuestionIndex - 1]; 
+        choiceButtons[questionData.answer].classList.add('correct');
+    }
+
+    function updateScoreDisplay() {
+        currentScoreEl.textContent = score;
+    }
+
+    function showResults() {
+        quizScreen.style.display = 'none';
+        resultScreen.style.display = 'block';
+        finalScoreEl.textContent = score;
+        totalQuestionsResultEl.textContent = currentQuizData.length; 
+        correctAnswersResultEl.textContent = correctAnswersCount;
+    }
+
+    function restartQuiz() {
+        resultScreen.style.display = 'none';
+        startScreen.style.display = 'block';
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        quizScreen.style.display = 'none';
+        resultScreen.style.display = 'none';
+        startScreen.style.display = 'block';
+    });
+
+</script>
+
+</body>
+</html>
